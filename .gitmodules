@@ -7,3 +7,6 @@
 [submodule "services/notification-service"]
 	path = services/notification-service
 	url = git@github.com:fjsuarez/notification-service.git
+[submodule "services/review-service"]
+	path = services/review-service
+	url = git@github.com:fjsuarez/review-service.git
