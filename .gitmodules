@@ -4,3 +4,6 @@
 [submodule "services/ride-service"]
 	path = services/ride-service
 	url = git@github.com:fjsuarez/ride-service.git
+[submodule "services/notification-service"]
+	path = services/notification-service
+	url = git@github.com:fjsuarez/notification-service.git
