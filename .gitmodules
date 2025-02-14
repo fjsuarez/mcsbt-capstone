@@ -10,3 +10,6 @@
 [submodule "services/review-service"]
 	path = services/review-service
 	url = git@github.com:fjsuarez/review-service.git
+[submodule "services/admin-service"]
+	path = services/admin-service
+	url = git@github.com:fjsuarez/admin-service.git
