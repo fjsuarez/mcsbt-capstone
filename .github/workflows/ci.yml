@@ -27,7 +27,7 @@ jobs:
         run: |
           if [ -f "services/${{ matrix.service }}/pyproject.toml" ]; then
             cd services/${{ matrix.service }}
-            pip install -e .
+            pip install -e .[dev]
             cd -
           fi
 
