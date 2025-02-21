@@ -25,7 +25,7 @@ jobs:
 
       - name: Install dependencies for ${{ matrix.service }}
         run: |
-          if [ -f "${{ matrix.service }}/pyproject.toml" ]; then
+          if [ -f "services/${{ matrix.service }}/pyproject.toml" ]; then
             cd services/${{ matrix.service }}
             pip install -e .
             cd -
@@ -33,7 +33,7 @@ jobs:
 
       - name: Run tests for ${{ matrix.service }}
         run: |
-          if [ -d "${{ matrix.service }}/tests" ]; then
+          if [ -d "services/${{ matrix.service }}/tests" ]; then
             cd services/${{ matrix.service }}
             pytest
             cd -
