@@ -64,6 +64,6 @@ jobs:
         run: |
           if [ -d "services/${{ matrix.service }}/tests" ]; then
             cd services/${{ matrix.service }}
-            uv run pytest
+            uv run pytest -s
             cd -
           fi
