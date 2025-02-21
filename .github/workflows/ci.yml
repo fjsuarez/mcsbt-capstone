@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [ "api-gateway", "admin-service", "ride-service", "notification-service", "review-service", "user-service" ]
+    steps:
+      - name: Checkout repository including submodules
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies for ${{ matrix.service }}
+        run: |
+          if [ -f "${{ matrix.service }}/pyproject.toml" ]; then
+            cd ${{ matrix.service }}
+            pip install -e .
+            cd -
+          fi
+
+      - name: Run tests for ${{ matrix.service }}
+        run: |
+          if [ -d "${{ matrix.service }}/tests" ]; then
+            cd ${{ matrix.service }}
+            pytest
+            cd -
+          fi
