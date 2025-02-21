@@ -31,7 +31,12 @@ jobs:
             cd -
           fi
 
-      - name: Write serviceAccount.json
+      - name: Write serviceAccount.json for api-gateway
+        if: ${{ matrix.service == 'api-gateway' }}
+        run: echo "${{ secrets.SERVICE_ACCOUNT_JSON }}" > credentials.json
+
+      - name: Write serviceAccount.json for non-api-gateway services
+        if: ${{ matrix.service != 'api-gateway' }}
         run: echo "${{ secrets.SERVICE_ACCOUNT_JSON }}" > credentials.json
         working-directory: services/${{ matrix.service }}
 
