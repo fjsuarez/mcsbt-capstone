@@ -31,6 +31,31 @@ jobs:
             cd -
           fi
 
+      - name: Create .env file for admin-service
+        if: ${{ matrix.service == 'admin-service' }}
+        run: echo "${{ secrets.SECRET_ADMIN_SERVICE_ENV }}" > .env
+        working-directory: services/${{ matrix.service }}
+
+      - name: Create .env file for notification-service
+        if: ${{ matrix.service == 'notification-service' }}
+        run: echo "${{ secrets.SECRET_NOTIFICATION_SERVICE_ENV }}" > .env
+        working-directory: services/${{ matrix.service }}
+
+      - name: Create .env file for review-service
+        if: ${{ matrix.service == 'review-service' }}
+        run: echo "${{ secrets.SECRET_REVIEW_SERVICE_ENV }}" > .env
+        working-directory: services/${{ matrix.service }}
+
+      - name: Create .env file for ride-service
+        if: ${{ matrix.service == 'ride-service' }}
+        run: echo "${{ secrets.SECRET_RIDE_SERVICE_ENV }}" > .env
+        working-directory: services/${{ matrix.service }}
+
+      - name: Create .env file for user-service
+        if: ${{ matrix.service == 'user-service' }}
+        run: echo "${{ secrets.SECRET_USER_SERVICE_ENV }}" > .env
+        working-directory: services/${{ matrix.service }}
+
       - name: Run tests for ${{ matrix.service }}
         run: |
           if [ -d "services/${{ matrix.service }}/tests" ]; then
