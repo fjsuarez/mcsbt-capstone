@@ -33,11 +33,17 @@ jobs:
 
       - name: Write serviceAccount.json for api-gateway
         if: ${{ matrix.service == 'api-gateway' }}
-        run: echo "${{ secrets.SERVICE_ACCOUNT_JSON }}" > credentials.json
+        run: |
+          cat <<EOF > credentials.json
+          ${{ secrets.SERVICE_ACCOUNT_JSON }}
+          EOF
 
       - name: Write serviceAccount.json for non-api-gateway services
         if: ${{ matrix.service != 'api-gateway' }}
-        run: echo "${{ secrets.SERVICE_ACCOUNT_JSON }}" > credentials.json
+        run: |
+          cat <<EOF > credentials.json
+          ${{ secrets.SERVICE_ACCOUNT_JSON }}
+          EOF
         working-directory: services/${{ matrix.service }}
 
       - name: Create .env file for admin-service
