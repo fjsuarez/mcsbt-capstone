@@ -1,24 +1,43 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Depends, status
+from fastapi.responses import Response
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import firebase_admin
+from firebase_admin import credentials, auth as firebase_auth
 import httpx
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    PORT : int
-    ADMIN_SERVICE_URL : str
-    NOTIFICATION_SERVICE_URL : str
-    REVIEW_SERVICE_URL : str
-    RIDE_SERVICE_URL : str
-    USER_SERVICE_URL : str
+    PORT: int
+    ADMIN_SERVICE_URL: str
+    NOTIFICATION_SERVICE_URL: str
+    REVIEW_SERVICE_URL: str
+    RIDE_SERVICE_URL: str
+    USER_SERVICE_URL: str
 
     class Config:
         env_file = ".env"
 
 settings = Settings()
 
-app = FastAPI()
+# Initialize Firebase Admin if not already initialized.
+if not firebase_admin._apps:
+    cred = credentials.Certificate("credentials.json")
+    firebase_admin.initialize_app(cred)
+
+security_scheme = HTTPBearer()
+
+def verify_jwt(credentials: HTTPAuthorizationCredentials = Depends(security_scheme)):
+    token = credentials.credentials
+    try:
+        decoded_token = firebase_auth.verify_id_token(token)
+        return decoded_token
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired auth token"
+        )
 
 async def proxy_request(request: Request, base_url: str, new_path: str = None):
-    # Use new_path if provided; otherwise use the full request path
     path = new_path if new_path is not None else request.url.path
     url = f"{base_url}{path}"
     if request.url.query:
@@ -34,30 +53,47 @@ async def proxy_request(request: Request, base_url: str, new_path: str = None):
             )
         except httpx.RequestError as exc:
             raise HTTPException(status_code=500, detail=str(exc))
-    return resp.json(), resp.status_code
+    
+    content_type = resp.headers.get("Content-Type", "")
+    body = resp.text
+    return Response(content=body, status_code=resp.status_code, media_type=content_type)
 
+app = FastAPI()
+
+# Protect the gateway endpoints by adding the verify_jwt dependency.
+@app.api_route("/users/login", methods=["POST"])
+async def login(request: Request):
+    # Proxy the login request to the user service without JWT verification.
+    return await proxy_request(request, settings.USER_SERVICE_URL)
+
+@app.api_route("/users/signup", methods=["POST"])
+async def signup(request: Request):
+    # Proxy the signup request to the user service without JWT verification.
+    return await proxy_request(request, settings.USER_SERVICE_URL)
+
+# Apply JWT verification for other /users endpoints.
 @app.api_route("/users/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
-async def users_gateway(path: str, request: Request):
+async def users_gateway(path: str, request: Request, token_data=Depends(verify_jwt)):
     new_path = "/" + path
     return await proxy_request(request, settings.USER_SERVICE_URL, new_path=new_path)
 
 @app.api_route("/rides/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
-async def rides_gateway(path: str, request: Request):
+async def rides_gateway(path: str, request: Request, token_data=Depends(verify_jwt)):
     new_path = "/" + path
     return await proxy_request(request, settings.RIDE_SERVICE_URL, new_path=new_path)
 
 @app.api_route("/notifications/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
-async def notifications_gateway(path: str, request: Request):
+async def notifications_gateway(path: str, request: Request, token_data=Depends(verify_jwt)):
     new_path = "/" + path
     return await proxy_request(request, settings.NOTIFICATION_SERVICE_URL, new_path=new_path)
 
 @app.api_route("/reviews/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
-async def reviews_gateway(path: str, request: Request):
+async def reviews_gateway(path: str, request: Request, token_data=Depends(verify_jwt)):
     new_path = "/" + path
     return await proxy_request(request, settings.REVIEW_SERVICE_URL, new_path=new_path)
 
 @app.api_route("/admin/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
-async def admin_gateway(path: str, request: Request):
+async def admin_gateway(path: str, request: Request, token_data=Depends(verify_jwt)):
     new_path = "/" + path
     return await proxy_request(request, settings.ADMIN_SERVICE_URL, new_path=new_path)
 

@@ -13,3 +13,6 @@
 [submodule "services/admin-service"]
 	path = services/admin-service
 	url = git@github.com:fjsuarez/admin-service.git
+[submodule "rideshare"]
+	path = rideshare
+	url = git@github.com:fjsuarez/rideshare.git
