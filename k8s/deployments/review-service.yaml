@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: review-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: review-service
+  template:
+    metadata:
+      labels:
+        app: review-service
+    spec:
+      containers:
+      - name: review-service
+        image: europe-southwest1-docker.pkg.dev/mcsbt-capstone/rideshare-repo/review-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8003
+        env:
+        - name: PORT
+          value: "8003"
+        volumeMounts:
+        - name: firebase-credentials
+          mountPath: "/app/credentials.json"
+          subPath: "credentials.json"
+      volumes:
+      - name: firebase-credentials
+        secret:
+          secretName: firebase-credentials

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-urls
+data:
+  ADMIN_SERVICE_URL: "http://admin-service:8001"
+  NOTIFICATION_SERVICE_URL: "http://notification-service:8002"
+  REVIEW_SERVICE_URL: "http://review-service:8003"
+  RIDE_SERVICE_URL: "http://ride-service:8004"
+  USER_SERVICE_URL: "http://user-service:8005"

@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-service
+  template:
+    metadata:
+      labels:
+        app: admin-service
+    spec:
+      containers:
+      - name: admin-service
+        image: europe-southwest1-docker.pkg.dev/mcsbt-capstone/rideshare-repo/admin-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8001
+        env:
+        - name: PORT
+          value: "8001"
+        volumeMounts:
+        - name: firebase-credentials
+          mountPath: "/app/credentials.json"
+          subPath: "credentials.json"
+      volumes:
+      - name: firebase-credentials
+        secret:
+          secretName: firebase-credentials

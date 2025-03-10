@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - name: notification-service
+        image: europe-southwest1-docker.pkg.dev/mcsbt-capstone/rideshare-repo/notification-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8002
+        env:
+        - name: PORT
+          value: "8002"
+        volumeMounts:
+        - name: firebase-credentials
+          mountPath: "/app/credentials.json"
+          subPath: "credentials.json"
+      volumes:
+      - name: firebase-credentials
+        secret:
+          secretName: firebase-credentials

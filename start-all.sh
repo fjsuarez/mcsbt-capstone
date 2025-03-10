@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+unset PORT
+
 # Start microservices in the background
 echo "Starting admin-service..."
 (cd services/admin-service && nohup uv run python main.py > admin-service.log 2>&1 &)

@@ -1,0 +1,46 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rideshare-ingress
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: "rideshare-ip"
+    networking.gke.io/managed-certificates: "rideshare-cert"
+    kubernetes.io/ingress.allow-http: "false"
+    ingress.gcp.kubernetes.io/v1beta1.BackendConfig: '{"healthCheck":{"checkIntervalSec":15,"timeoutSec":5,"healthyThreshold":2,"unhealthyThreshold":2,"type":"HTTP","requestPath":"/healthz"}}'
+spec:
+  ingressClassName: "gce"
+  rules:
+  - host: gorideshare.dev
+    http:
+      paths:
+      - path: /api/
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 80
+  - host: www.gorideshare.dev
+    http:
+      paths:
+      - path: /api/
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 80

@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ride-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ride-service
+  template:
+    metadata:
+      labels:
+        app: ride-service
+    spec:
+      containers:
+      - name: ride-service
+        image: europe-southwest1-docker.pkg.dev/mcsbt-capstone/rideshare-repo/ride-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8004
+        env:
+        - name: PORT
+          value: "8004"
+        volumeMounts:
+        - name: firebase-credentials
+          mountPath: "/app/credentials.json"
+          subPath: "credentials.json"
+      volumes:
+      - name: firebase-credentials
+        secret:
+          secretName: firebase-credentials

@@ -1,0 +1,8 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: rideshare-cert
+spec:
+  domains:
+  - gorideshare.dev
+  - www.gorideshare.dev
