@@ -1,9 +1,9 @@
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, Request, HTTPException, Depends, status
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import Response
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBearer
 import firebase_admin
-from firebase_admin import credentials, auth as firebase_auth
+from firebase_admin import credentials, auth
 import httpx
 from pydantic_settings import BaseSettings
 
@@ -27,37 +27,64 @@ if not firebase_admin._apps:
 
 security_scheme = HTTPBearer()
 
-def verify_jwt(credentials: HTTPAuthorizationCredentials = Depends(security_scheme)):
-    token = credentials.credentials
-    try:
-        decoded_token = firebase_auth.verify_id_token(token)
-        return decoded_token
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired auth token"
-        )
-
-async def proxy_request(request: Request, base_url: str, new_path: str = None):
-    path = new_path if new_path is not None else request.url.path
-    url = f"{base_url}{path}"
-    if request.url.query:
-        url = f"{url}?{request.url.query}"
-    async with httpx.AsyncClient() as client:
-        try:
-            resp = await client.request(
-                request.method,
-                url,
-                headers=request.headers,
-                content=await request.body(),
-                timeout=10.0
-            )
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=500, detail=str(exc))
+# This is where token verification happens:
+async def verify_jwt(request: Request):
+    authorization = request.headers.get("Authorization")
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
     
-    content_type = resp.headers.get("Content-Type", "")
-    body = resp.text
-    return Response(content=body, status_code=resp.status_code, media_type=content_type)
+    try:
+        # Debug info
+        print("Auth header received:", authorization[:15] + "...")
+        
+        # Clean the token - remove 'Bearer ' prefix if present
+        token = authorization.replace("Bearer ", "") if authorization.startswith("Bearer ") else authorization
+        
+        # Verify token with Firebase
+        decoded_token = auth.verify_id_token(token)
+        print("Token verified successfully, uid:", decoded_token.get('uid'))
+        return decoded_token
+    except Exception as e:
+        print(f"Token verification error: {str(e)}")
+        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+
+async def proxy_request(request: Request, base_url: str, new_path: str = None, headers: dict = None):
+    """Proxy the request to the specified service."""
+    path = new_path if new_path is not None else request.url.path
+    
+    # Prepare request headers
+    request_headers = dict(request.headers)
+    if headers:
+        request_headers.update(headers)
+    
+    # Remove host header to avoid conflicts
+    if "host" in request_headers:
+        del request_headers["host"]
+        
+    target_url = f"{base_url}{path}"
+    
+    try:
+        body = await request.body()
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.request(
+                method=request.method,
+                url=target_url,
+                headers=request_headers,
+                content=body,
+                params=request.query_params,
+                follow_redirects=True
+            )
+            
+        # Return the response from the service
+        return Response(
+            content=response.content,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.headers.get("content-type")
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error proxying request: {str(e)}")
 
 app = FastAPI(
     root_path="/api",
@@ -88,8 +115,11 @@ async def signup(request: Request):
 # Apply JWT verification for other /users endpoints.
 @app.api_route("/users/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"], operation_id="users_gateway_operation")
 async def users_gateway(path: str, request: Request, token_data=Depends(verify_jwt)):
+    headers = dict(request.headers)
+    headers["X-User-ID"] = token_data.get('uid', '')
+    
     new_path = "/" + path
-    return await proxy_request(request, settings.USER_SERVICE_URL, new_path=new_path)
+    return await proxy_request(request, settings.USER_SERVICE_URL, new_path=new_path, headers=headers)
 
 @app.api_route("/rides/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"], operation_id="rides_gateway_operation")
 async def rides_gateway(path: str, request: Request, token_data=Depends(verify_jwt)):
@@ -110,11 +140,6 @@ async def reviews_gateway(path: str, request: Request, token_data=Depends(verify
 async def admin_gateway(path: str, request: Request, token_data=Depends(verify_jwt)):
     new_path = "/" + path
     return await proxy_request(request, settings.ADMIN_SERVICE_URL, new_path=new_path)
-
-@app.get("/healthz", include_in_schema=False, root_path="")
-async def root_healthz():
-    """Health check endpoint for GKE ingress."""
-    return {"status": "ok"}
 
 @app.get("/healthz", include_in_schema=False)
 async def healthz():
