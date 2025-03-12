@@ -123,8 +123,11 @@ async def users_gateway(path: str, request: Request, token_data=Depends(verify_j
 
 @app.api_route("/rides/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"], operation_id="rides_gateway_operation")
 async def rides_gateway(path: str, request: Request, token_data=Depends(verify_jwt)):
+    headers = dict(request.headers)
+    headers["X-User-ID"] = token_data.get('uid', '')
+
     new_path = "/" + path
-    return await proxy_request(request, settings.RIDE_SERVICE_URL, new_path=new_path)
+    return await proxy_request(request, settings.RIDE_SERVICE_URL, new_path=new_path, headers=headers)
 
 @app.api_route("/notifications/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"], operation_id="notifications_gateway_operation")
 async def notifications_gateway(path: str, request: Request, token_data=Depends(verify_jwt)):
