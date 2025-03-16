@@ -1,9 +1,8 @@
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, Request, HTTPException, Depends, status
-from fastapi.responses import Response
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import OpenIdConnect
+from fastapi.responses import JSONResponse
 import firebase_admin
-from firebase_admin import credentials, auth as firebase_auth
 import httpx
 from pydantic_settings import BaseSettings
 
@@ -20,44 +19,26 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Initialize Firebase Admin if not already initialized.
+services = {
+    "admin": settings.ADMIN_SERVICE_URL,
+    "notifications": settings.NOTIFICATION_SERVICE_URL,
+    "reviews": settings.REVIEW_SERVICE_URL,
+    "rides": settings.RIDE_SERVICE_URL,
+    "users": settings.USER_SERVICE_URL
+}
+
 if not firebase_admin._apps:
-    cred = credentials.Certificate("credentials.json")
+    cred = firebase_admin.credentials.Certificate("credentials.json")
     firebase_admin.initialize_app(cred)
 
-security_scheme = HTTPBearer()
+openid_connect_url = f"https://securetoken.google.com/{cred.project_id}/.well-known/openid-configuration"
+security_scheme = OpenIdConnect(openIdConnectUrl=openid_connect_url)
 
-def verify_jwt(credentials: HTTPAuthorizationCredentials = Depends(security_scheme)):
-    token = credentials.credentials
-    try:
-        decoded_token = firebase_auth.verify_id_token(token)
-        return decoded_token
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired auth token"
-        )
-
-async def proxy_request(request: Request, base_url: str, new_path: str = None):
-    path = new_path if new_path is not None else request.url.path
-    url = f"{base_url}{path}"
-    if request.url.query:
-        url = f"{url}?{request.url.query}"
+async def forward_request(service_url: str, method: str, path: str, body : dict = None, headers: dict = None):
     async with httpx.AsyncClient() as client:
-        try:
-            resp = await client.request(
-                request.method,
-                url,
-                headers=request.headers,
-                content=await request.body(),
-                timeout=10.0
-            )
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=500, detail=str(exc))
-    
-    content_type = resp.headers.get("Content-Type", "")
-    body = resp.text
-    return Response(content=body, status_code=resp.status_code, media_type=content_type)
+        url = f"{service_url}{path}"
+        response = await client.request(method, url, json=body, headers=headers)
+        return response
 
 app = FastAPI(
     root_path="/api",
@@ -74,53 +55,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Protect the gateway endpoints by adding the verify_jwt dependency.
-@app.api_route("/users/login", methods=["POST"])
-async def login(request: Request):
-    # Proxy the login request to the user service without JWT verification.
-    return await proxy_request(request, settings.USER_SERVICE_URL)
+@app.api_route(
+        "/{service}/{path:path}", 
+        methods=["GET", "POST", "PUT", "DELETE", "PATCH"], 
+        dependencies=[Depends(security_scheme)],
+        operation_id="gateway")
+async def gateway(service: str, path: str, request: Request):
+    if service not in services:
+        raise HTTPException(status_code=404, detail="Service not found")
+    service_url = services[service]
+    body = await request.json() if request.method in ["POST", "PUT", "PATCH"] else None
+    headers = dict(request.headers)
+    response = await forward_request(service_url, request.method, f"/{path}", body, headers)
+    return JSONResponse(status_code=response.status_code, content=response.json())
 
-@app.api_route("/users/signup", methods=["POST"])
-async def signup(request: Request):
-    # Proxy the signup request to the user service without JWT verification.
-    return await proxy_request(request, settings.USER_SERVICE_URL)
-
-# Apply JWT verification for other /users endpoints.
-@app.api_route("/users/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"], operation_id="users_gateway_operation")
-async def users_gateway(path: str, request: Request, token_data=Depends(verify_jwt)):
-    new_path = "/" + path
-    return await proxy_request(request, settings.USER_SERVICE_URL, new_path=new_path)
-
-@app.api_route("/rides/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"], operation_id="rides_gateway_operation")
-async def rides_gateway(path: str, request: Request, token_data=Depends(verify_jwt)):
-    new_path = "/" + path
-    return await proxy_request(request, settings.RIDE_SERVICE_URL, new_path=new_path)
-
-@app.api_route("/notifications/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"], operation_id="notifications_gateway_operation")
-async def notifications_gateway(path: str, request: Request, token_data=Depends(verify_jwt)):
-    new_path = "/" + path
-    return await proxy_request(request, settings.NOTIFICATION_SERVICE_URL, new_path=new_path)
-
-@app.api_route("/reviews/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"], operation_id="reviews_gateway_operation")
-async def reviews_gateway(path: str, request: Request, token_data=Depends(verify_jwt)):
-    new_path = "/" + path
-    return await proxy_request(request, settings.REVIEW_SERVICE_URL, new_path=new_path)
-
-@app.api_route("/admin/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"], operation_id="admin_gateway_operation")
-async def admin_gateway(path: str, request: Request, token_data=Depends(verify_jwt)):
-    new_path = "/" + path
-    return await proxy_request(request, settings.ADMIN_SERVICE_URL, new_path=new_path)
-
-@app.get("/healthz", include_in_schema=False, root_path="")
-async def root_healthz():
-    """Health check endpoint for GKE ingress."""
-    return {"status": "ok"}
-
-@app.get("/healthz", include_in_schema=False)
-async def healthz():
+@app.get("/health", include_in_schema=False)
+async def health():
     """Health check endpoint for GKE ingress."""
     return {"status": "ok"}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=settings.PORT)
+    uvicorn.run(app, host="0.0.0.0", port=settings.PORT, log_level="info")
