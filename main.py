@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 import firebase_admin
 import httpx
 from pydantic_settings import BaseSettings
+import json
 
 class Settings(BaseSettings):
     PORT: int
@@ -64,8 +65,14 @@ async def gateway(service: str, path: str, request: Request):
     if service not in services:
         raise HTTPException(status_code=404, detail="Service not found")
     service_url = services[service]
-    body = await request.json() if request.method in ["POST", "PUT", "PATCH"] else None
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        print("Request with no body")
+        body = None
     headers = dict(request.headers)
+    if headers and "content-length" in headers:
+        headers.pop("content-length", None)
     response = await forward_request(service_url, request.method, f"/{path}", body, headers)
     return JSONResponse(status_code=response.status_code, content=response.json())
 
