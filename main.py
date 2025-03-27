@@ -78,11 +78,11 @@ async def gateway(service: str, path: str, request: Request):
     response = await forward_request(service_url, request.method, f"/{path}", body, headers, params=query_params)
     return JSONResponse(status_code=response.status_code, content=response.json())
 
-@app.get("/health", include_in_schema=False)
+@app.get("/livez", include_in_schema=False)
 async def health():
     """Health check endpoint for GKE ingress."""
     return {"status": "ok"}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=settings.PORT, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=settings.PORT)

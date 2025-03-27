@@ -1,0 +1,22 @@
+apiVersion: networking.gke.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: api-gateway-healthcheck
+  namespace: default
+spec:
+  default:
+    checkIntervalSec: 30
+    timeoutSec: 5
+    healthyThreshold: 2
+    unhealthyThreshold: 2
+    logConfig:
+      enabled: true
+    config:
+      type: HTTP
+      httpHealthCheck:
+        port: 8000
+        requestPath: /livez
+  targetRef:
+    group: ""
+    kind: Service
+    name: api-gateway

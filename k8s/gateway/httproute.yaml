@@ -1,0 +1,35 @@
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1beta1
+metadata:
+  name: frontend
+  namespace: default
+spec:
+  parentRefs:
+  - kind: Gateway
+    name: testgwapi-global-external-managed
+    namespace: default
+    sectionName: https
+  hostnames:
+    - gorideshare.dev
+    - "*.gorideshare.dev"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /api/
+    backendRefs:
+    - name: api-gateway
+      kind: Service
+      namespace: default
+      port: 8000
+      weight: 100
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: frontend
+      kind: Service
+      namespace: default
+      port: 80
+      weight: 100
