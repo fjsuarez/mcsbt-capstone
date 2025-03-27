@@ -15,7 +15,7 @@ spec:
       containers:
       - name: notification-service
         image: europe-southwest1-docker.pkg.dev/mcsbt-capstone/rideshare-repo/notification-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 8002
         env:

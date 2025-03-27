@@ -15,7 +15,7 @@ spec:
       containers:
       - name: frontend
         image: europe-southwest1-docker.pkg.dev/mcsbt-capstone/rideshare-repo/frontend:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
         resources:

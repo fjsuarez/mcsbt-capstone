@@ -15,7 +15,7 @@ spec:
       containers:
       - name: review-service
         image: europe-southwest1-docker.pkg.dev/mcsbt-capstone/rideshare-repo/review-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 8003
         env:

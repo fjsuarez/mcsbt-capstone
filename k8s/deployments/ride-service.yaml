@@ -15,7 +15,7 @@ spec:
       containers:
       - name: ride-service
         image: europe-southwest1-docker.pkg.dev/mcsbt-capstone/rideshare-repo/ride-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 8004
         env:
