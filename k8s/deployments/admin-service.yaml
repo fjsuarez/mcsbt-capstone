@@ -15,7 +15,7 @@ spec:
       containers:
       - name: admin-service
         image: europe-southwest1-docker.pkg.dev/mcsbt-capstone/rideshare-repo/admin-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 8001
         env:

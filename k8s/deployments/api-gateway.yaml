@@ -15,7 +15,7 @@ spec:
       containers:
       - name: api-gateway
         image: europe-southwest1-docker.pkg.dev/mcsbt-capstone/rideshare-repo/api-gateway:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
         env:

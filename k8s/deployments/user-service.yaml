@@ -15,7 +15,7 @@ spec:
       containers:
       - name: user-service
         image: europe-southwest1-docker.pkg.dev/mcsbt-capstone/rideshare-repo/user-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 8005
         env:
