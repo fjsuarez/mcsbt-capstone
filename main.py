@@ -35,10 +35,10 @@ if not firebase_admin._apps:
 openid_connect_url = f"https://securetoken.google.com/{cred.project_id}/.well-known/openid-configuration"
 security_scheme = OpenIdConnect(openIdConnectUrl=openid_connect_url)
 
-async def forward_request(service_url: str, method: str, path: str, body : dict = None, headers: dict = None):
+async def forward_request(service_url: str, method: str, path: str, body : dict = None, headers: dict = None, params: dict = None):
     async with httpx.AsyncClient() as client:
         url = f"{service_url}{path}"
-        response = await client.request(method, url, json=body, headers=headers)
+        response = await client.request(method, url, json=body, headers=headers, params=params)
         return response
 
 app = FastAPI(
@@ -65,15 +65,17 @@ async def gateway(service: str, path: str, request: Request):
     if service not in services:
         raise HTTPException(status_code=404, detail="Service not found")
     service_url = services[service]
+    query_params = dict(request.query_params)
     try:
         body = await request.json()
+        print(body)
     except json.JSONDecodeError:
         print("Request with no body")
         body = None
     headers = dict(request.headers)
     if headers and "content-length" in headers:
         headers.pop("content-length", None)
-    response = await forward_request(service_url, request.method, f"/{path}", body, headers)
+    response = await forward_request(service_url, request.method, f"/{path}", body, headers, params=query_params)
     return JSONResponse(status_code=response.status_code, content=response.json())
 
 @app.get("/health", include_in_schema=False)
