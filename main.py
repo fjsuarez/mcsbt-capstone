@@ -36,7 +36,7 @@ openid_connect_url = f"https://securetoken.google.com/{cred.project_id}/.well-kn
 security_scheme = OpenIdConnect(openIdConnectUrl=openid_connect_url)
 
 async def forward_request(service_url: str, method: str, path: str, body : dict = None, headers: dict = None, params: dict = None):
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=60.0) as client:
         url = f"{service_url}{path}"
         response = await client.request(method, url, json=body, headers=headers, params=params)
         return response
