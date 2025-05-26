@@ -2,6 +2,7 @@
 
 **RideShare is an innovative carpooling app designed to seamlessly match riders with drivers for their daily commutes, optimizing routes and minimizing walking distances.**
 
+![Rider Details](./assets/Rider%20Details.png)
 ---
 
 ## Table of Contents
@@ -19,10 +20,14 @@
 ## Overview
 RideShare allows users to register as either a **rider** or a **driver**. By setting their home and work locations, the app intelligently matches riders with drivers whose existing commute routes align. The core objective is to make carpooling convenient by minimizing the walking distance for riders.
 
+![Onboarding](./assets/Onboarding.png)
+
 Users can personalize their experience with options such as:
 * Setting a maximum preferred walking distance.
 * Specifying their commuting days.
 * (Considered Feature) A gender filter to enhance user comfort and safety.
+
+![Max Distance Filter](./assets/Max%20Distance%20Filter.png)
 
 ---
 
@@ -36,6 +41,7 @@ Users can personalize their experience with options such as:
 * **Real-time Notifications:** (Implied by Firebase usage) For match updates, etc.
 * **Authentication:** Secure user login and management.
 
+![Request Approval](./assets/Request%20Approval.png)
 ---
 
 ## Purpose & Motivation
